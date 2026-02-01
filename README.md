@@ -104,9 +104,8 @@ engine.run()
 
 Este projeto é distribuído sob um modelo de licenciamento duplo para garantir máxima liberdade e segurança jurídica para adoção governamental e corporativa:
 
-1. **MIT License:** Permissiva, ideal para startups e uso acadêmico.
-2. **Apache License 2.0:** Oferece proteção explícita contra litígios de patentes, ideal para grandes corporações e setor público (SUS).
-
+1. **MIT License** 
+2. **Apache License 2.0** 
 Veja os arquivos `LICENSE-MIT` e `LICENSE-APACHE` para detalhes completos.
 
 ---
