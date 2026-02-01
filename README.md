@@ -125,6 +125,3 @@ Desenvolvido por **Kalluan Cley Fiuza**.
 
 *"A ciência é feita de dados, mas a sabedoria é feita de inferências."*
 
-```
-
-```
