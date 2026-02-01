@@ -1,0 +1,10 @@
+# Ignorar arquivos compilados e de ambiente
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.env
+dist/
+build/
+*.egg-info/
+.DS_Store

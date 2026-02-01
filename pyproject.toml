@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ikin-expert"
+version = "0.1.0"
+description = "Engine de Sistemas Especialistas Moderna (Baseada em Pydantic e Algoritmo Rete)."
+readme = "README.md"
+authors = [
+  { name = "Kalluan Cley Fiuza", email = "kalluancartoon@gmail.com" },
+]
+license = { text = "MIT OR Apache-2.0" }
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Healthcare Industry",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/kalluan/ikin-expert"
