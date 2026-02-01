@@ -106,6 +106,7 @@ Este projeto é distribuído sob um modelo de licenciamento duplo para garantir 
 
 1. **MIT License** 
 2. **Apache License 2.0** 
+
 Veja os arquivos `LICENSE-MIT` e `LICENSE-APACHE` para detalhes completos.
 
 ---
