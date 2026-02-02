@@ -18,7 +18,8 @@ from .engine import (
     KnowledgeEngine,
     Rule,
     Fact,
-    Pattern
+    Pattern,
+    Token
 )
 
 # Define o que será exportado quando alguém usar "from ikin_expert import *"
@@ -27,4 +28,5 @@ __all__ = [
     "Rule",
     "Fact",
     "Pattern",
+    "Token",
 ]
