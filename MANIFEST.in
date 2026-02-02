@@ -1,0 +1,6 @@
+include README.md
+include LICENSE-MIT
+include LICENSE-APACHE
+include pyproject.toml
+recursive-include src/ikin_expert *.py
+global-exclude *.py[cod] __pycache__ *.so
