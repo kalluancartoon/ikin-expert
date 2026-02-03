@@ -19,10 +19,9 @@ class Match:
         return f"<Match {self.name}>"
 
     def __getattr__(self, name):
-        # Permite sintaxe MATCH.qualquer_coisa
         return Match(name)
 
-# Instância global para uso fácil
+# Instância global
 MATCH = Match("root")
 
 # =============================================================================
@@ -31,7 +30,7 @@ MATCH = Match("root")
 
 class Fact(BaseModel):
     """
-    Unidade atômica de informação. Imutável e Hashable.
+    Unidade atômica de informação. Imutável.
     """
     model_config = {'frozen': True}
 
@@ -44,14 +43,12 @@ class Token:
     def __init__(self, parent: Optional['Token'], fact: Optional[Fact]):
         self.parent = parent
         self.fact = fact
-        # Cache da lista plana para performance em Joins
         self._flat_list = None
     
     def to_list(self) -> List[Fact]:
         if self._flat_list is None:
             facts = []
             current = self
-            # Navega para trás até chegar no Token Raiz
             while current is not None:
                 if current.fact is not None:
                     facts.append(current.fact)
@@ -60,7 +57,6 @@ class Token:
         return self._flat_list
 
     def get_fact_by_index(self, index: int) -> Optional[Fact]:
-        """Recupera um fato específico do histórico do token."""
         facts = self.to_list()
         if 0 <= index < len(facts):
             return facts[index]
@@ -90,7 +86,6 @@ class ReteNode:
 # --- ALPHA NETWORK ---
 
 class AlphaNode(ReteNode):
-    """Filtra fatos individuais (Ex: idade > 18)."""
     def __init__(self, field: str, op: str, value: Any):
         super().__init__()
         self.field = field
@@ -102,8 +97,7 @@ class AlphaNode(ReteNode):
         if not hasattr(fact, self.field): return False
         fact_val = getattr(fact, self.field)
         
-        # Se o valor for um MATCH (variável), AlphaNode SEMPRE aprova.
-        # A validação real acontecerá no HashJoinNode.
+        # Se o valor for um MATCH (variável), AlphaNode aprova.
         if isinstance(self.value, Match):
             return True
 
@@ -141,10 +135,9 @@ class TypeNode(ReteNode):
                 elif isinstance(child, RuleTerminalNode):
                     child.activate_single(fact, engine)
 
-# --- BETA NETWORK (O Coração da v2.0) ---
+# --- BETA NETWORK ---
 
 class BetaNode(ReteNode):
-    """Classe base para nós Beta."""
     def __init__(self):
         super().__init__()
         self.left_memory: List[Token] = []
@@ -165,10 +158,6 @@ class BetaNode(ReteNode):
                 child.activate_token(new_token, engine)
 
 class CartesianBetaNode(BetaNode):
-    """
-    Join Padrão (Sem índice). Faz o produto cartesiano.
-    Usado quando não há variáveis compartilhadas.
-    """
     def left_activate(self, token: Token, engine):
         self.left_memory.append(token)
         for fact in self.right_memory:
@@ -180,19 +169,11 @@ class CartesianBetaNode(BetaNode):
             self.propagate(token, fact, engine)
 
 class HashJoinNode(BetaNode):
-    """
-    NOVO NA V2.0: Join Indexado (Hash Join).
-    Usa Dicionários para O(1) lookups.
-    """
     def __init__(self, left_idx: int, left_field: str, right_field: str):
         super().__init__()
-        # Configuração do Join
-        self.left_idx = left_idx    # Qual fato do histórico tem a chave?
-        self.left_field = left_field # Qual campo é a chave?
-        self.right_field = right_field # Qual campo do novo fato é a chave?
-        
-        # Memórias Indexadas (Hashmaps)
-        # Chave -> Lista de Itens
+        self.left_idx = left_idx
+        self.left_field = left_field
+        self.right_field = right_field
         self.left_index: Dict[Any, List[Token]] = defaultdict(list)
         self.right_index: Dict[Any, List[Fact]] = defaultdict(list)
 
@@ -200,42 +181,28 @@ class HashJoinNode(BetaNode):
         return getattr(obj, field, None)
 
     def left_activate(self, token: Token, engine):
-        # 1. Descobre a chave de join no histórico
         target_fact = token.get_fact_by_index(self.left_idx)
         if not target_fact: return
-        
         key = self._get_key(target_fact, self.left_field)
-        
-        # 2. Indexa
         self.left_index[key].append(token)
-        
-        # 3. Busca Instantânea na memória da direita
         if key in self.right_index:
             for fact in self.right_index[key]:
                 self.propagate(token, fact, engine)
 
     def right_activate(self, fact: Fact, engine):
-        # 1. Descobre a chave no fato novo
         key = self._get_key(fact, self.right_field)
-        
-        # 2. Indexa
         self.right_index[key].append(fact)
-        
-        # 3. Busca Instantânea na memória da esquerda
         if key in self.left_index:
             for token in self.left_index[key]:
                 self.propagate(token, fact, engine)
 
 class DummyBetaNode(ReteNode):
-    """Iniciador da rede Beta."""
     def left_activate(self, engine):
         for child in self.children:
             if isinstance(child, BetaNode):
-                # Token raiz (sem pai, sem fato)
                 child.left_activate(Token(None, None), engine)
 
 class RuleTerminalNode(ReteNode):
-    """Ativador Final."""
     def __init__(self, rule_name: str, action: Callable, salience: int):
         super().__init__()
         self.rule_name = rule_name
@@ -250,7 +217,7 @@ class RuleTerminalNode(ReteNode):
         engine.agenda.add_activation(self, [fact])
 
 # =============================================================================
-# 5. MOTOR E COMPILADOR INTELIGENTE
+# 5. ENGINE E AGENDA
 # =============================================================================
 
 class Activation:
@@ -289,12 +256,26 @@ class KnowledgeEngine:
         self.dummy_beta = DummyBetaNode()
         self._build_network()
 
+    # --- NOVO MÉTODO (CORREÇÃO DE BUG) ---
+    def reset(self):
+        """
+        Reinicia a engine: limpa a agenda e reconstrói a rede Rete (limpando memórias).
+        """
+        self.agenda.clear()
+        self.rete_root = {}
+        self.dummy_beta = DummyBetaNode()
+        self._build_network()
+
     def _build_network(self):
         for name, method in inspect.getmembers(self):
             if getattr(method, "_is_rule", False):
                 self._compile_rule(method)
 
     def _get_or_create_alpha_chain(self, pattern: Pattern) -> ReteNode:
+        # --- BLINDAGEM CONTRA ERROS DE TIPO ---
+        if not isinstance(pattern, Pattern):
+            raise TypeError(f"Erro na Regra: Esperado objeto 'Pattern', recebido {type(pattern)}. Use Pattern(Classe, ...)")
+        
         if pattern.model_class not in self.rete_root:
             self.rete_root[pattern.model_class] = TypeNode(pattern.model_class)
         current = self.rete_root[pattern.model_class]
@@ -302,9 +283,6 @@ class KnowledgeEngine:
         for field_op, value in pattern.constraints.items():
             if "__" in field_op: field, op = field_op.split("__")
             else: field, op = field_op, "eq"
-            
-            # Se for MATCH (Binding), o AlphaNode apenas passa adiante (sucesso automático)
-            # A filtragem real será no HashJoin
             
             found = None
             for child in current.children:
@@ -329,55 +307,38 @@ class KnowledgeEngine:
             last_alpha = self._get_or_create_alpha_chain(patterns[0])
             last_alpha.add_child(terminal)
         else:
-            # COMPILADOR BETA INTELIGENTE v2.0
-            # Rastreia variáveis para decidir entre CartesianJoin ou HashJoin
-            
-            # Mapa de Variáveis: "var_name" -> (pattern_index, field_name)
             known_vars: Dict[str, Tuple[int, str]] = {}
-            
             current_beta_input = self.dummy_beta
             
-            # Analisa o padrão 0 (inicial) para popular variáveis
+            # Popula variáveis do primeiro padrão
             first_pattern = patterns[0]
             for k, v in first_pattern.constraints.items():
                 if isinstance(v, Match):
                     field = k.split("__")[0]
                     known_vars[v.name] = (0, field)
 
-            # Começa a construir a cadeia a partir do padrão 1
-            # O padrão 0 entra via Dummy -> Left Input do primeiro Beta
-            
             for i, pattern in enumerate(patterns):
                 alpha_tail = self._get_or_create_alpha_chain(pattern)
                 
-                # Se for o primeiro padrão, ele só alimenta o input, não cria join ainda
-                if i == 0:
-                    continue
+                if i == 0: continue
 
-                # Decisão: HashJoin ou CartesianJoin?
                 join_var = None
-                join_config = None # (left_idx, left_field, right_field)
+                join_config = None
 
-                # Verifica se este padrão usa alguma variável já conhecida
                 for k, v in pattern.constraints.items():
                     if isinstance(v, Match):
                         field_name = k.split("__")[0]
                         if v.name in known_vars:
-                            # BINGO! Encontramos uma chave de join.
                             left_idx, left_field = known_vars[v.name]
                             join_config = (left_idx, left_field, field_name)
                             join_var = v.name
-                            break # Por simplicidade, usamos a primeira chave que acharmos
+                            break 
                         else:
-                            # Nova variável, registra
                             known_vars[v.name] = (i, field_name)
 
                 if join_config:
-                    # Cria nó Otimizado
                     join_node = HashJoinNode(*join_config)
-                    # print(f" [COMPILER] Otimizando regra '{method.__name__}': HashJoin em {join_var.name}")
                 else:
-                    # Join Genérico
                     join_node = CartesianBetaNode()
 
                 current_beta_input.add_child(join_node)
@@ -398,10 +359,16 @@ class KnowledgeEngine:
             activation = self.agenda.pop()
             if not activation: break
             try:
+                # Injeta os fatos correspondentes na função da regra
+                # (Versão Simplificada: passa os objetos Fact na ordem)
                 sig = inspect.signature(activation.node.action)
                 params = len(sig.parameters)
-                if params == 0: activation.node.action()
-                else: activation.node.action(*activation.facts[:params])
+                if params == 0: 
+                    activation.node.action()
+                else: 
+                    # Garante que não passamos mais argumentos do que a função pede
+                    activation.node.action(*activation.facts[:params])
             except Exception as e:
                 print(f" [ERROR] Rule {activation.node.rule_name}: {e}")
+                # Opcional: raise e para ver o stack trace completo
             steps += 1
