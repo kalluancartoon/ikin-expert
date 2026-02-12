@@ -41,3 +41,99 @@ Agora disponível oficialmente no PyPI:
 
 ```bash
 pip install ikin-expert
+
+```
+
+*Requisitos: Python 3.10 ou superior.*
+
+---
+
+## 💻 Exemplo de Uso: Automação Residencial (IoT)
+
+Veja como criar um "cérebro" para uma casa inteligente que toma decisões baseadas em sensores:
+
+```python
+from ikin_expert import KnowledgeEngine, Rule, Fact, MATCH, OR
+
+# 1. Definindo os Sensores (Fatos)
+class Sensor(Fact):
+    tipo: str     # "movimento", "temperatura", "fumaca"
+    local: str    # "sala", "cozinha", "quarto"
+    ativo: bool
+
+class Ambiente(Fact):
+    periodo: str  # "dia", "noite"
+
+# 2. Criando o Cérebro da Casa
+class HomeAssistant(KnowledgeEngine):
+
+    # REGRA: Iluminação Inteligente
+    # SE detectar movimento em um local (MATCH.loc) E for noite...
+    # ... ENTÃO acenda a luz DAQUELE local específico.
+    @Rule(
+        Sensor(tipo="movimento", local=MATCH.loc, ativo=True),
+        Ambiente(periodo="noite")
+    )
+    def acender_luzes(self, loc):
+        print(f"💡 AÇÃO: Movimento detectado! Acendendo luzes da {loc}.")
+
+    # REGRA: Segurança Crítica (Incêndio)
+    # SE detectar fumaça OU temperatura muito alta (> 60 graus)...
+    # ... ENTÃO dispare o alarme geral.
+    @Rule(
+        OR(
+            Sensor(tipo="fumaca", ativo=True),
+            Sensor(tipo="temperatura", valor__gt=60.0)
+        ),
+        salience=100  # Prioridade máxima! Executa antes de tudo.
+    )
+    def alarme_incendio(self):
+        print("🔥 EMERGÊNCIA: Risco de Incêndio! Ativando sprinklers e sirene.")
+
+# 3. Execução
+jarvis = HomeAssistant()
+jarvis.reset()
+
+# Cenário: É noite, houve movimento na sala e a cozinha está pegando fogo
+jarvis.declare(Ambiente(periodo="noite"))
+jarvis.declare(Sensor(tipo="movimento", local="sala", ativo=True))
+jarvis.declare(Sensor(tipo="temperatura", local="cozinha", valor=85.0))
+
+jarvis.run()
+
+```
+
+---
+
+## 🆚 Comparativo de Performance
+
+| Tecnologia | Método de Junção | Resultado (1k x 1k dados) |
+| --- | --- | --- |
+| **Legado / Naive** | Loop Aninhado | 🐌 Lento / Trava CPU |
+| **Ikin-Expert v2.0** | **Hash Join Indexado** | 🚀 **Instantâneo** |
+
+---
+
+## ⚖️ Propriedade Intelectual
+
+* **Registro de Software (INPI):** BR 51 2026 000822-0
+* **Licença:** Dual License (MIT + Apache 2.0)
+
+---
+
+## 👨🏿‍🔬 Autor e Pesquisador
+
+Desenvolvido por **Kalluan Cley Fiuza**.
+
+* 🔬 **Foco de Pesquisa:** HealthTech, IA Simbólica, Nefrologia Computacional.
+* 🏢 **Mantenedor:** Projeto incubado no ecossistema **Kalluan Cartoon™**.
+* 📧 **Email:** kalluancartoon@gmail.com
+* 🔗 **LinkedIn:** [Kalluan C. Fiuza](https://www.linkedin.com/in/kalluan-c-fiuza-b5a17b221/)
+* 🆔 **ORCID:** [0009-0005-2693-6477](https://orcid.org/0009-0005-2693-6477)
+* 📚 **Currículo Lattes:** [Acessar Lattes](https://lattes.cnpq.br/7267245059752858)
+
+---
+
+```
+
+```
