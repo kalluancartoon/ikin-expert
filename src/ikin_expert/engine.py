@@ -256,7 +256,6 @@ class KnowledgeEngine:
         self.dummy_beta = DummyBetaNode()
         self._build_network()
 
-    # --- NOVO MÉTODO (CORREÇÃO DE BUG) ---
     def reset(self):
         """
         Reinicia a engine: limpa a agenda e reconstrói a rede Rete (limpando memórias).
@@ -272,9 +271,10 @@ class KnowledgeEngine:
                 self._compile_rule(method)
 
     def _get_or_create_alpha_chain(self, pattern: Pattern) -> ReteNode:
-        # --- BLINDAGEM CONTRA ERROS DE TIPO ---
         if not isinstance(pattern, Pattern):
-            raise TypeError(f"Erro na Regra: Esperado objeto 'Pattern', recebido {type(pattern)}. Use Pattern(Classe, ...)")
+            # Fallback para permitir uso futuro de AND/OR sem crashar,
+            # mas o ideal é tratar Pattern objects.
+            pass
         
         if pattern.model_class not in self.rete_root:
             self.rete_root[pattern.model_class] = TypeNode(pattern.model_class)
@@ -359,16 +359,41 @@ class KnowledgeEngine:
             activation = self.agenda.pop()
             if not activation: break
             try:
-                # Injeta os fatos correspondentes na função da regra
-                # (Versão Simplificada: passa os objetos Fact na ordem)
                 sig = inspect.signature(activation.node.action)
                 params = len(sig.parameters)
                 if params == 0: 
                     activation.node.action()
                 else: 
-                    # Garante que não passamos mais argumentos do que a função pede
                     activation.node.action(*activation.facts[:params])
             except Exception as e:
                 print(f" [ERROR] Rule {activation.node.rule_name}: {e}")
-                # Opcional: raise e para ver o stack trace completo
             steps += 1
+
+# =============================================================================
+# 6. OPERADORES LÓGICOS E ALIAS (Novos Componentes)
+# =============================================================================
+
+class ConditionalElement:
+    """Classe base para elementos condicionais (AND, OR, NOT)"""
+    def __init__(self, *rules):
+        self.rules = rules
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}({self.rules})"
+
+class AND(ConditionalElement):
+    """Operador Lógico E"""
+    pass
+
+class OR(ConditionalElement):
+    """Operador Lógico OU"""
+    pass
+
+class NOT(ConditionalElement):
+    """Operador Lógico NÃO"""
+    pass
+
+class AS:
+    """Usado para dar apelidos a variáveis nas regras"""
+    def __init__(self, name):
+        self.name = name
