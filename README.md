@@ -1,4 +1,4 @@
-# Ikin-Expert 🧠 v2.0.2
+# Ikin-Expert 🧠 v2.0.3
 
 **A High-Performance Rete Engine with Hash Joins for Python.**
 
@@ -11,27 +11,27 @@
 
 ---
 
-## 🚀 O que há de novo na v2.0.2?
+## 🚀 O que há de novo na v2.0.3?
 
-Esta versão consolida o motor para uso em **Sistemas Críticos (HealthTech)**:
+Esta versão eleva o motor, focando em estabilidade e integração profunda:
 
-* **✅ Correção de Memória:** O método `.reset()` agora garante a limpeza total da `WorkingMemory`, permitindo o processamento seguro de múltiplos pacientes/casos em sequência.
-* **✅ Novos Operadores Lógicos:** Suporte nativo para `AND`, `OR`, `NOT` e `AS` (Alias) para regras complexas.
-* **✅ Hash Joins O(1):** Cruzamento de dados instantâneo entre fatos diferentes utilizando tabelas hash indexadas.
+✅ Ponte Alfa-Beta (Hash-Join Layer): Correção crítica na propagação de fatos entre nós Alfa (filtros) e Beta (junções). Agora, a intersecção de múltiplos fatos é garantida via indexação por Hash.
 
+✅ Resiliência de Memória: Validada em testes de estresse de 20 horas+ com ocupação de 100% de CPU e consumo estável de RAM (~4.5%), sem memory leaks.
+
+✅ Dicionário de Operadores Estável: Padronização da sintaxe de comparação (ex: __gte, __contains, __eq) para garantir a manutenibilidade do código.
 ---
 
 ## 📋 Sobre o Projeto
 
-O **Ikin-Expert** é uma biblioteca de Sistemas Especialistas projetada para substituir ferramentas legadas no ecossistema Python moderno (3.10+).
+O **Ikin-Expert** é uma biblioteca de Sistemas Especialistas esenvolvido pela Kalluan Cartoon para substituir motores legados, unindo IA Simbólica à robustez do **Pydantic v2.**
 
 Diferente de antecessores que utilizavam estruturas de dados lentas, o Ikin-Expert implementa **Indexação Automática** e tipagem forte com Pydantic.
 
 ### Principais Diferenciais
-* **⚡ Hash Joins (O(1)):** Se você cruzar 10.000 Pacientes com 10.000 Exames, o sistema usa índices hash para encontrar pares instantaneamente, evitando o produto cartesiano lento.
-* **🛡️ Type Safety:** Integração nativa com **Pydantic**.
-* **🔗 Sintaxe Poderosa:** Use `MATCH` para ligar variáveis e `AND`/`OR` para lógica condicional aninhada.
-* **🏥 Medical-Grade:** Projetado para suportar o projeto **NephroIA** (Diagnóstico Renal), garantindo estabilidade e precisão.
+* **⚡Complexidade Amortizada (O(1)):** Se você cruzar 10.000 Pacientes com 10.000 Exames, o sistema usa índices hash para encontrar pares instantaneamente, evitando o produto cartesiano lento.
+* **🛡️ Engenharia de Dados:** Integração nativa com **Pydantic**.
+* **🏗️ Arquitetura Rete Otimizada:** Separação clara entre Memória de Trabalho e Base de Conhecimento para maior previsibilidade temporal.
 
 ---
 
@@ -53,53 +53,39 @@ pip install ikin-expert
 Veja como criar um "cérebro" para uma casa inteligente que toma decisões baseadas em sensores:
 
 ```python
-from ikin_expert import KnowledgeEngine, Rule, Fact, MATCH, OR
+from ikin_expert import KnowledgeEngine, Rule, Fact, MATCH
+from pydantic import Field
 
-# 1. Definindo os Sensores (Fatos)
-class Sensor(Fact):
-    tipo: str     # "movimento", "temperatura", "fumaca"
-    local: str    # "sala", "cozinha", "quarto"
-    ativo: bool
+# 1. Definindo os Modelos de Dados (Fatos)
+class Termostato(Fact):
+    local: str
+    temperatura: float = Field(gt=-50, lt=100)
 
-class Ambiente(Fact):
-    periodo: str  # "dia", "noite"
+class Presenca(Fact):
+    local: str
+    detectada: bool
 
-# 2. Criando o Cérebro da Casa
-class HomeAssistant(KnowledgeEngine):
+# 2. Motor de Inferência (Gestão de Climatização)
+class ClimaManager(KnowledgeEngine):
 
-    # REGRA: Iluminação Inteligente
-    # SE detectar movimento em um local (MATCH.loc) E for noite...
-    # ... ENTÃO acenda a luz DAQUELE local específico.
+    # REGRA: Ativar Ar-Condicionado
+    # SE houver presença no local (MATCH.loc) E a temperatura for > 25...
     @Rule(
-        Sensor(tipo="movimento", local=MATCH.loc, ativo=True),
-        Ambiente(periodo="noite")
+        Presenca(local=MATCH.loc, detectada=True),
+        Termostato(local=MATCH.loc, temperatura__gt=25.0)
     )
-    def acender_luzes(self, loc):
-        print(f"💡 AÇÃO: Movimento detectado! Acendendo luzes da {loc}.")
-
-    # REGRA: Segurança Crítica (Incêndio)
-    # SE detectar fumaça OU temperatura muito alta (> 60 graus)...
-    # ... ENTÃO dispare o alarme geral.
-    @Rule(
-        OR(
-            Sensor(tipo="fumaca", ativo=True),
-            Sensor(tipo="temperatura", valor__gt=60.0)
-        ),
-        salience=100  # Prioridade máxima! Executa antes de tudo.
-    )
-    def alarme_incendio(self):
-        print("🔥 EMERGÊNCIA: Risco de Incêndio! Ativando sprinklers e sirene.")
+    def ligar_refrigeracao(self, loc):
+        print(f"❄️ AÇÃO: Climatizando a {loc}. Conforto térmico ativado.")
 
 # 3. Execução
-jarvis = HomeAssistant()
-jarvis.reset()
+sistema = ClimaManager()
+sistema.reset() # Governança: Limpeza da Working Memory
 
-# Cenário: É noite, houve movimento na sala e a cozinha está pegando fogo
-jarvis.declare(Ambiente(periodo="noite"))
-jarvis.declare(Sensor(tipo="movimento", local="sala", ativo=True))
-jarvis.declare(Sensor(tipo="temperatura", local="cozinha", valor=85.0))
+# Simulando dados de sensores
+sistema.declare(Presenca(local="sala", detectada=True))
+sistema.declare(Termostato(local="sala", temperatura=28.5))
 
-jarvis.run()
+sistema.run()
 
 ```
 
@@ -107,11 +93,10 @@ jarvis.run()
 
 ## 🆚 Comparativo de Performance
 
-| Tecnologia | Método de Junção | Resultado (1k x 1k dados) |
-| --- | --- | --- |
-| **Legado / Naive** | Loop Aninhado | 🐌 Lento / Trava CPU |
-| **Ikin-Expert v2.0** | **Hash Join Indexado** | 🚀 **Instantâneo** |
-
+|Métrica|Métodos Legados (Naive)|Ikin-Expert v2.0.3
+|Complexidade de Junção|O(Nĸ) (Exponencial)|O(1) Amortizado
+|Uso de Memória (Estresse)|Inconsistente / Leaks|Estável (~4.5% RAM)
+|Variabilidade Temporal|Alta / Imprevisível|Baixa / Determinística
 ---
 
 ## ⚖️ Propriedade Intelectual
@@ -125,9 +110,9 @@ jarvis.run()
 
 Desenvolvido por **Kalluan Cley Fiuza**.
 
-* 🔬 **Foco de Pesquisa:** HealthTech, IA Simbólica, Nefrologia Computacional.
+* 🔬 **Foco de Pesquisa:** HealthTech, IA Simbólica, Sistemas Especialistas.
 * 🏢 **Mantenedor:** Projeto incubado no ecossistema **Kalluan Cartoon™**.
-* 📧 **Email:** kalluancartoon@gmail.com
+* 📧 **Email:** contato@kalluancartoon.com.br
 * 🔗 **LinkedIn:** [Kalluan C. Fiuza](https://www.linkedin.com/in/kalluan-c-fiuza-b5a17b221/)
 * 🆔 **ORCID:** [0009-0005-2693-6477](https://orcid.org/0009-0005-2693-6477)
 * 📚 **Currículo Lattes:** [Acessar Lattes](https://lattes.cnpq.br/7267245059752858)

@@ -157,6 +157,20 @@ class BetaNode(ReteNode):
             elif isinstance(child, RuleTerminalNode):
                 child.activate_token(new_token, engine)
 
+class AlphaBetaAdapter(BetaNode):
+    """
+    Adaptador Estrutural: Converte o primeiro Fato (da Alpha Network) 
+    em um Token Inicial para alimentar o lado esquerdo do HashJoinNode.
+    """
+    def right_activate(self, fact: Fact, engine):
+        token = Token(parent=None, fact=fact)
+        self.left_memory.append(token)
+        for child in self.children:
+            if isinstance(child, BetaNode):
+                child.left_activate(token, engine)
+            elif isinstance(child, RuleTerminalNode):
+                child.activate_token(token, engine)
+
 class CartesianBetaNode(BetaNode):
     def left_activate(self, token: Token, engine):
         self.left_memory.append(token)
@@ -272,8 +286,6 @@ class KnowledgeEngine:
 
     def _get_or_create_alpha_chain(self, pattern: Pattern) -> ReteNode:
         if not isinstance(pattern, Pattern):
-            # Fallback para permitir uso futuro de AND/OR sem crashar,
-            # mas o ideal é tratar Pattern objects.
             pass
         
         if pattern.model_class not in self.rete_root:
@@ -285,9 +297,12 @@ class KnowledgeEngine:
             else: field, op = field_op, "eq"
             
             found = None
+            # CORREÇÃO DO EFEITO DOMINÓ: Usando parênteses em vez de '\'
             for child in current.children:
-                if isinstance(child, AlphaNode) and \
-                   child.field == field and child.op == op and child.value == value:
+                if (isinstance(child, AlphaNode) and 
+                    child.field == field and 
+                    child.op == op and 
+                    child.value == value):
                     found = child
                     break
             
@@ -308,19 +323,23 @@ class KnowledgeEngine:
             last_alpha.add_child(terminal)
         else:
             known_vars: Dict[str, Tuple[int, str]] = {}
-            current_beta_input = self.dummy_beta
             
-            # Popula variáveis do primeiro padrão
+            # 1. Trata o Primeiro Padrão (O Adaptador resolve o antigo bug de inicialização)
             first_pattern = patterns[0]
+            alpha_tail_0 = self._get_or_create_alpha_chain(first_pattern)
+            adapter = AlphaBetaAdapter()
+            alpha_tail_0.add_child(adapter)
+            current_beta_input = adapter
+
             for k, v in first_pattern.constraints.items():
                 if isinstance(v, Match):
                     field = k.split("__")[0]
                     known_vars[v.name] = (0, field)
 
-            for i, pattern in enumerate(patterns):
+            # 2. Trata os Padrões Subsequentes construindo os Joins
+            for i in range(1, len(patterns)):
+                pattern = patterns[i]
                 alpha_tail = self._get_or_create_alpha_chain(pattern)
-                
-                if i == 0: continue
 
                 join_var = None
                 join_config = None
@@ -346,16 +365,19 @@ class KnowledgeEngine:
                 current_beta_input = join_node
             
             current_beta_input.add_child(terminal)
-            self.dummy_beta.left_activate(self)
 
     def declare(self, fact: Fact):
         fact_type = type(fact)
         if fact_type in self.rete_root:
             self.rete_root[fact_type].activate(fact, self)
 
-    def run(self):
+    def run(self, max_steps: int = 100000):
+        """
+        Executa as regras da Agenda.
+        max_steps: Trava de segurança contra loops infinitos (Padrão: 100.000 ciclos).
+        """
         steps = 0
-        while steps < 1000:
+        while steps < max_steps:
             activation = self.agenda.pop()
             if not activation: break
             try:

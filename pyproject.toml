@@ -4,18 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ikin-expert"
-version = "2.0.2"
+version = "2.0.3"
 description = "High-Performance Rete Engine with Hash Joins for Python."
 readme = "README.md"
 requires-python = ">=3.10"
-license = "MIT OR Apache-2.0"
-license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
+license = {text = "MIT OR Apache-2.0"}
 authors = [
-  {name = "Kalluan Cley Fiuza", email = "kalluancartoon@gmail.com"},
+  {name = "Kalluan Cley Fiuza", email = "fiuza@kalluancartoon.com.br"},
 ]
 keywords = ["expert-system", "rete-algorithm", "rule-engine", "ai", "inference", "hash-join"]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
   "Intended Audience :: Science/Research",  
   "Programming Language :: Python :: 3.10",
@@ -29,3 +28,7 @@ dependencies = [
 [project.urls]
 "Homepage" = "https://github.com/kalluancartoon/ikin-expert"
 "Bug Tracker" = "https://github.com/kalluancartoon/ikin-expert/issues"
+
+# 🛠️ A SEÇÃO QUE FALTAVA (Indispensável para o seu layout de pastas)
+[tool.setuptools.packages.find]
+where = ["src"]
