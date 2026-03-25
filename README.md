@@ -136,16 +136,3 @@ O Ikin-Expert foi projetado para aplicações que exigem **inferência simbólic
 * validação e classificação simbólica de conhecimento.
 
 ---
-
-```
-
-Ajustes principais que eu fiz:
-- corrigi erros de português e concordância;
-- removi quebras e formatação quebrada;
-- consertei a tabela Markdown;
-- deixei o texto mais técnico e mais confiável;
-- tirei o bloco de código solto no final;
-- padronizei capitalização, termos e estilo.
-
-Se você quiser, eu posso fazer agora uma **segunda versão ainda mais forte, com padrão de README de projeto open source internacional**, pronta para GitHub e PyPI.
-```
