@@ -1,4 +1,3 @@
-````md
 # Ikin-Expert 🧠 v2.0.3
 
 **A High-Performance Rete Engine with Hash Joins for Python**
